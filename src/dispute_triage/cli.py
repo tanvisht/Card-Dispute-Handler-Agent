@@ -42,6 +42,10 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--out", default="reports/eval")
     e.add_argument("--workers", type=int, default=8)
 
+    k = sub.add_parser("agreement", help="Cohen's kappa between two labelers on a double-labeled sheet")
+    k.add_argument("--sheet", default="data/labels/double_labeled.csv")
+    k.add_argument("--field", choices=["root_cause", "priority"], default="root_cause")
+
     a = p.parse_args(argv)
     if a.cmd == "fetch":
         src = cfpb.read_csv(a.csv, a.limit) if a.csv else cfpb.fetch_from_api(a.limit, a.since, a.until)
@@ -63,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         print(to_markdown(rep))
         print(f"classifier={get_settings().triage_classifier} errors={len(errors)}")
         return 0 if rep.passed else 1
+    elif a.cmd == "agreement":
+        from .evaluation.agreement import agreement_from_csv
+        print(json.dumps(agreement_from_csv(a.sheet, a.field), indent=2))
     return 0
 
 

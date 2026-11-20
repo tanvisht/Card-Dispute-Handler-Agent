@@ -19,5 +19,5 @@ Thresholds are enforced in code by `src/dispute_triage/evaluation/evaluate.py::A
 ## Gold set protocol
 * 300 complaints drawn with `triage sample -n 300` (stratified by CFPB issue/sub-issue, seed 42).
 * Each labeled independently by 2 people using `docs/LABELING_GUIDE.md`. Disagreements are adjudicated by a third person.
-* Report Cohen's kappa for the two labelers next to the model score. Model accuracy can't be read meaningfully above human agreement.
+* Run `triage agreement --sheet data/labels/double_labeled.csv` (columns `labeler_a_root_cause`, `labeler_b_root_cause`) and report Cohen's kappa for the two labelers next to the model score. Model accuracy can't be read meaningfully above human agreement.
 * The gold set is **frozen**. Prompt iterations are tuned on a separate dev sample to avoid overfitting the test set.
