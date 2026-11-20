@@ -40,6 +40,9 @@ class Classification(BaseModel):
     needs_human_review: bool
     review_reasons: list[str] = Field(default_factory=list)
     classifier: str  # "llm:<model>" or "rules:v1"
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cache_read_tokens: int | None = None
     prompt_version: str
     classified_at: datetime
 

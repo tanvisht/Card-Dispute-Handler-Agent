@@ -64,3 +64,28 @@ def test_prompt_v2_includes_few_shot_examples_and_is_sent(settings, complaints):
     LLMClassifier(settings, client=SimpleNamespace(messages=FakeMessages())).classify(complaints[0])
     sent = captured["system"][0]
     assert "WORKED EXAMPLES" in sent["text"] and sent["cache_control"] == {"type": "ephemeral"}
+
+
+def test_llm_usage_is_recorded_and_persisted(settings, complaints):
+    from dispute_triage.storage.repository import SQLiteRepository
+
+    class FakeMessages:
+        def create(self, **kw):
+            return SimpleNamespace(
+                content=[SimpleNamespace(type="tool_use", input={
+                    "root_cause": "duplicate_processing", "priority": "P2", "confidence": 0.95,
+                    "rationale": "", "evidence_quote": "I was charged twice"})],
+                usage=SimpleNamespace(input_tokens=120, output_tokens=45, cache_read_input_tokens=1800))
+
+    out = LLMClassifier(settings, client=SimpleNamespace(messages=FakeMessages())).classify(complaints[2])
+    assert (out.input_tokens, out.output_tokens, out.cache_read_tokens) == (120, 45, 1800)
+    repo = SQLiteRepository(":memory:")
+    repo.upsert_complaints([complaints[2]])
+    repo.insert_classifications([out])
+    row = repo.query("SELECT input_tokens, cache_read_tokens FROM classifications")[0]
+    assert row == {"input_tokens": 120, "cache_read_tokens": 1800}
+
+
+def test_rules_classifier_has_no_usage(settings, complaints):
+    out = RulesClassifier(settings).classify(complaints[0])
+    assert out.input_tokens is None and out.output_tokens is None

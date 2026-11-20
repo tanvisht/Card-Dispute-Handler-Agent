@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS classifications (
   complaint_id TEXT, root_cause TEXT, visa_reason_code TEXT, mastercard_reason_code TEXT,
   reason_code_label TEXT, priority TEXT, is_fraud INTEGER, confidence REAL, rationale TEXT,
   evidence_quote TEXT, needs_human_review INTEGER, review_reasons TEXT, classifier TEXT,
+  input_tokens INTEGER, output_tokens INTEGER, cache_read_tokens INTEGER,
   prompt_version TEXT, classified_at TEXT);
 CREATE TABLE IF NOT EXISTS review_decisions (
   complaint_id TEXT, reviewer TEXT, root_cause TEXT, priority TEXT, notes TEXT,

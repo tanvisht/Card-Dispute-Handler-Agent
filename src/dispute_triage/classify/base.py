@@ -63,6 +63,7 @@ def finalize(complaint: Complaint, raw: dict, classifier: str, settings: Setting
         classifier=classifier,
         prompt_version=settings.triage_prompt_version,
         classified_at=datetime.now(UTC),
+        **(raw.get("_usage") or {}),
         **reason_codes_for(root),
     )
 

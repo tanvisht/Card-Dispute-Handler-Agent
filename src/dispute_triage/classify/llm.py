@@ -35,5 +35,13 @@ class LLMClassifier(Classifier):
         log.debug("classified %s in %.2fs", complaint.complaint_id, time.perf_counter() - t0)
         for block in resp.content:
             if block.type == "tool_use":
-                return RawLabel(block.input)
+                label = RawLabel(block.input)
+                u = getattr(resp, "usage", None)
+                if u is not None:
+                    label["_usage"] = {
+                        "input_tokens": getattr(u, "input_tokens", None),
+                        "output_tokens": getattr(u, "output_tokens", None),
+                        "cache_read_tokens": getattr(u, "cache_read_input_tokens", None),
+                    }
+                return label
         raise RuntimeError(f"no tool_use block for complaint {complaint.complaint_id}")
