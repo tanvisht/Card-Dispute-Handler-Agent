@@ -27,3 +27,16 @@ def test_stratified_sample_deterministic(complaints):
     a = [c.complaint_id for c in stratified_sample(complaints, 5, seed=1)]
     b = [c.complaint_id for c in stratified_sample(complaints, 5, seed=1)]
     assert a == b and len(a) == 5
+
+
+def test_calibration_perfect_and_overconfident():
+    from dispute_triage.evaluation.evaluate import calibration
+    assert calibration([1.0, 1.0], [True, True])["ece"] == 0.0
+    over = calibration([0.9] * 10, [True] * 5 + [False] * 5)
+    assert over["ece"] == 0.4 and over["bins"][0]["n"] == 10
+
+
+def test_report_includes_calibration_section(settings, complaints):
+    preds = [RulesClassifier(settings).classify(c) for c in complaints]
+    rep = evaluate(preds, load_gold(FIX / "gold_labels.csv"))
+    assert "ece" in rep.metrics and "Calibration" in to_markdown(rep)

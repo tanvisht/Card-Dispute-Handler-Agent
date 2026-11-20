@@ -23,6 +23,28 @@ ACCEPTANCE = {
 }
 
 
+def calibration(confidences: list[float], correct: list[bool], n_bins: int = 5) -> dict:
+    """Reliability bins + Expected Calibration Error (ECE).
+
+    ECE = sum_b (|b|/N) * |accuracy_b - mean_confidence_b|. 0 = perfectly calibrated.
+    Tells us whether TRIAGE_CONFIDENCE_THRESHOLD actually separates good from bad outputs.
+    """
+    n = len(confidences)
+    bins = []
+    ece = 0.0
+    for i in range(n_bins):
+        lo, hi = i / n_bins, (i + 1) / n_bins
+        idx = [j for j, c in enumerate(confidences) if lo <= c < hi or (i == n_bins - 1 and c == 1.0)]
+        if not idx:
+            continue
+        acc = sum(correct[j] for j in idx) / len(idx)
+        conf = sum(confidences[j] for j in idx) / len(idx)
+        ece += len(idx) / n * abs(acc - conf)
+        bins.append({"bin": f"{lo:.1f}-{hi:.1f}", "n": len(idx), "accuracy": round(acc, 4),
+                     "mean_confidence": round(conf, 4)})
+    return {"ece": round(ece, 4), "bins": bins}
+
+
 @dataclass
 class Report:
     n: int
@@ -30,6 +52,7 @@ class Report:
     per_class: dict[str, dict[str, float]]
     confusion: dict[str, dict[str, int]]
     acceptance: dict[str, dict] = field(default_factory=dict)
+    calibration: dict = field(default_factory=dict)
 
     @property
     def passed(self) -> bool:
@@ -91,8 +114,11 @@ def evaluate(preds: list[Classification], gold: dict[str, tuple[RootCause, Prior
         ok = val <= thr if k.startswith("max_") else val >= thr
         acceptance[k] = {"threshold": thr, "actual": val, "pass": ok}
 
+    calib = calibration([p.confidence for p, _ in pairs], rc_ok)
+    metrics["ece"] = calib["ece"]
     return Report(n=n, metrics=metrics, per_class=per_class,
-                  confusion={k: dict(v) for k, v in confusion.items()}, acceptance=acceptance)
+                  confusion={k: dict(v) for k, v in confusion.items()}, acceptance=acceptance,
+                  calibration=calib)
 
 
 def _visa(rc: RootCause) -> str:
@@ -109,4 +135,9 @@ def to_markdown(r: Report) -> str:
     lines += ["", "## Per-class", "", "| Root cause | Support | Precision | Recall | F1 |", "|---|---|---|---|---|"]
     for k, v in sorted(r.per_class.items(), key=lambda kv: -kv[1]["support"]):
         lines.append(f"| {k} | {v['support']} | {v['precision']} | {v['recall']} | {v['f1']} |")
+    if r.calibration:
+        lines += ["", f"## Calibration (ECE = {r.calibration['ece']})", "",
+                  "| Confidence bin | N | Accuracy | Mean confidence |", "|---|---|---|---|"]
+        for b in r.calibration["bins"]:
+            lines.append(f"| {b['bin']} | {b['n']} | {b['accuracy']} | {b['mean_confidence']} |")
     return "\n".join(lines) + "\n"
