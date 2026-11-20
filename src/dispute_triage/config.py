@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     triage_prompt_version: str = "v2"
     triage_max_narrative_chars: int = 6000
 
+    triage_api_key: str | None = None  # when set, /v1/* requires header X-API-Key
+
     triage_storage: Literal["sqlite", "snowflake"] = "sqlite"
     triage_sqlite_path: str = "data/triage.db"
 

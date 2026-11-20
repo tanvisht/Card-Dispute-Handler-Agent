@@ -308,6 +308,7 @@ TRIAGE_STORAGE=snowflake make run   # after running sql/snowflake/*.sql in order
 | `TRIAGE_MODEL` | `claude-sonnet-5-5` | Any Claude model ID |
 | `TRIAGE_CLASSIFIER` | `llm` | `llm` or `rules` |
 | `TRIAGE_CONFIDENCE_THRESHOLD` | `0.75` | Below this, the case is flagged for review |
+| `TRIAGE_API_KEY` | none | When set, every `/v1/*` request needs a matching `X-API-Key` header |
 | `TRIAGE_STORAGE` | `sqlite` | `sqlite` or `snowflake` |
 | `SNOWFLAKE_*` | none | Account, user, password, role, warehouse, database, schema |
 

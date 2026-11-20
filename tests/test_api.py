@@ -45,3 +45,22 @@ def test_ingest_idempotent_then_review_flow(client, complaints):
 
 def test_unknown_case_404(client):
     assert client.get("/v1/cases/nope").status_code == 404
+
+
+def test_request_id_echoed_and_generated(client):
+    r = client.get("/health", headers={"X-Request-ID": "abc123"})
+    assert r.headers["X-Request-ID"] == "abc123" and r.headers["Server-Timing"].startswith("app;dur=")
+    assert len(client.get("/health").headers["X-Request-ID"]) == 32
+
+
+def test_api_key_enforced_when_configured(client, monkeypatch):
+    from dispute_triage.config import get_settings
+    get_settings.cache_clear()
+    monkeypatch.setenv("TRIAGE_API_KEY", "s3cret")
+    try:
+        assert client.get("/v1/cases").status_code == 401
+        assert client.get("/v1/cases", headers={"X-API-Key": "wrong"}).status_code == 401
+        assert client.get("/v1/cases", headers={"X-API-Key": "s3cret"}).status_code == 200
+        assert client.get("/health").status_code == 200  # liveness stays open
+    finally:
+        get_settings.cache_clear()
