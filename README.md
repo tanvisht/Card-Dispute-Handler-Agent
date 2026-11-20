@@ -225,6 +225,7 @@ erDiagram
 | `02_views.sql` | `V_CASES` (latest classification + analyst override, via `QUALIFY ROW_NUMBER()`), `V_CASE_AGING`, `V_RECURRING_ISSUES` (company × cause ≥ 5 in 90 days), `V_CATEGORY_TRENDS` (monthly + MoM via `LAG`), `V_MODEL_QUALITY` (online agreement from reviews) |
 | `03_procedures.sql` | `SP_MERGE_COMPLAINTS`: idempotent upsert from staging |
 | `04_data_quality.sql` | Checks that should each return 0 rows |
+| `05_streams_tasks.sql` | `RAW_COMPLAINTS_STREAM` (change capture) + `V_PENDING_CLASSIFICATION`, `SP_RUN_DQ_CHECKS` logging to `DQ_RESULTS`, daily `TASK_DAILY_DQ` (06:00 UTC), and `MART.V_DQ_LATEST` for a data-health card |
 
 **Why classifications are append-only.** Re-running with a new model or prompt version keeps history. That gives an audit trail and lets two prompt versions be A/B compared over the same cases.
 
