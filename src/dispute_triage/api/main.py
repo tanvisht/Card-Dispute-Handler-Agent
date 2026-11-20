@@ -1,7 +1,9 @@
 """FastAPI service: ad-hoc classification, case queue, human review, dashboard metrics."""
 from __future__ import annotations
 
+import csv
 import hmac
+import io
 import json
 import logging
 import time
@@ -11,6 +13,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
 
 from .. import __version__
 from ..classify import Classifier, get_classifier
@@ -107,6 +110,40 @@ def list_cases(repo: Repo,
     sql += " ORDER BY priority ASC, age_days DESC LIMIT ? OFFSET ?"
     args += [limit, offset]
     return [_row(r) for r in repo.query(sql, tuple(args))]
+
+
+EXPORT_COLUMNS = ["complaint_id", "date_received", "company", "state", "root_cause", "priority",
+                  "visa_reason_code", "mastercard_reason_code", "is_fraud", "confidence",
+                  "case_status", "age_days", "needs_human_review", "review_reasons"]
+
+
+def _csv_safe(v):
+    """Neutralise spreadsheet formula injection (cells starting with = + - @)."""
+    if isinstance(v, str) and v[:1] in ("=", "+", "-", "@"):
+        return "'" + v
+    return v
+
+
+@app.get("/v1/cases/export", dependencies=Auth)
+def export_cases(repo: Repo,
+                 status: str | None = Query(None, pattern="^(PENDING_REVIEW|AUTO_TRIAGED|REVIEWED)$"),
+                 priority: Priority | None = None):
+    """Download the case queue as CSV (opens directly in Excel)."""
+    sql, args = f"SELECT {', '.join(EXPORT_COLUMNS)} FROM v_cases WHERE 1=1", []
+    if status:
+        sql += " AND case_status = ?"; args.append(status)
+    if priority:
+        sql += " AND priority = ?"; args.append(priority.value)
+    sql += " ORDER BY priority ASC, age_days DESC"
+    rows = repo.query(sql, tuple(args))
+    buf = io.StringIO()
+    w = csv.DictWriter(buf, fieldnames=EXPORT_COLUMNS, extrasaction="ignore")
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: _csv_safe(v) for k, v in r.items()})
+    buf.seek(0)
+    return StreamingResponse(iter([buf.getvalue()]), media_type="text/csv",
+                             headers={"Content-Disposition": "attachment; filename=cases.csv"})
 
 
 @app.get("/v1/cases/{complaint_id}", dependencies=Auth)

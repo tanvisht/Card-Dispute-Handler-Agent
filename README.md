@@ -237,6 +237,7 @@ Run `make run-api`, then open the interactive docs at `http://localhost:8000/doc
 | POST | `/v1/classify` | Classify one narrative (not stored) |
 | POST | `/v1/complaints/ingest` | Load ≤ 1,000 complaints and classify any new ones (idempotent) |
 | GET | `/v1/cases?status=&priority=&root_cause=&limit=&offset=` | Work queue, sorted by priority then oldest |
+| GET | `/v1/cases/export?status=&priority=` | Queue as a CSV download (formula-injection safe) |
 | GET | `/v1/cases/{id}` | One case |
 | POST | `/v1/cases/{id}/review` | Analyst decision (overrides the model in the views) |
 | GET | `/v1/metrics/summary` | Counts by status, priority, cause, and aging bucket, plus review rate |

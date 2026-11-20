@@ -64,3 +64,22 @@ def test_api_key_enforced_when_configured(client, monkeypatch):
         assert client.get("/health").status_code == 200  # liveness stays open
     finally:
         get_settings.cache_clear()
+
+
+def test_export_csv(client, complaints):
+    import csv as _csv
+    import io as _io
+    client.post("/v1/complaints/ingest", json=[c.model_dump(mode="json") for c in complaints])
+    r = client.get("/v1/cases/export")
+    assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")
+    assert "attachment" in r.headers["content-disposition"]
+    rows = list(_csv.DictReader(_io.StringIO(r.text)))
+    assert len(rows) == 10 and "visa_reason_code" in rows[0]
+    p1 = client.get("/v1/cases/export", params={"priority": "P1"}).text
+    assert all(row["priority"] == "P1" for row in _csv.DictReader(_io.StringIO(p1)))
+
+
+def test_csv_formula_injection_neutralised():
+    from dispute_triage.api.main import _csv_safe
+    assert _csv_safe("=HYPERLINK(1)") == "'=HYPERLINK(1)" and _csv_safe("Bank A") == "Bank A"
+    assert _csv_safe(3) == 3
