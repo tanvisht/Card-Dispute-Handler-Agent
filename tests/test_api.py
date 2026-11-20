@@ -1,0 +1,47 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from dispute_triage.api.main import app, classifier_dep, repo_dep
+from dispute_triage.classify.rules import RulesClassifier
+from dispute_triage.storage.repository import SQLiteRepository
+
+
+@pytest.fixture
+def client(settings):
+    repo, clf = SQLiteRepository(":memory:"), RulesClassifier(settings)
+    app.dependency_overrides[repo_dep] = lambda: repo
+    app.dependency_overrides[classifier_dep] = lambda: clf
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_health(client):
+    assert client.get("/health").json()["status"] == "ok"
+
+
+def test_classify_adhoc(client):
+    r = client.post("/v1/classify", json={"narrative": "I was charged twice for the same dinner."})
+    assert r.status_code == 200 and r.json()["root_cause"] == "duplicate_processing"
+    assert r.json()["needs_human_review"]  # short narrative -> review
+
+
+def test_ingest_idempotent_then_review_flow(client, complaints):
+    body = [c.model_dump(mode="json") for c in complaints]
+    first = client.post("/v1/complaints/ingest", json=body).json()
+    assert first["classified"] == 10
+    again = client.post("/v1/complaints/ingest", json=body).json()
+    assert again["classified"] == 0 and again["skipped_already_done"] == 10
+
+    pending = client.get("/v1/cases", params={"status": "PENDING_REVIEW"}).json()
+    assert pending, "P1 cases must land in the review queue"
+    cid = pending[0]["complaint_id"]
+    r = client.post(f"/v1/cases/{cid}/review",
+                    json={"reviewer": "analyst1", "root_cause": "account_takeover", "priority": "P1"})
+    assert r.json()["case_status"] == "REVIEWED" and r.json()["root_cause"] == "account_takeover"
+
+    s = client.get("/v1/metrics/summary").json()
+    assert s["total_cases"] == 10
+
+
+def test_unknown_case_404(client):
+    assert client.get("/v1/cases/nope").status_code == 404

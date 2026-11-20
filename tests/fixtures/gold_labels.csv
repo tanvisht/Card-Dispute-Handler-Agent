@@ -1,0 +1,11 @@
+complaint_id,gold_root_cause,gold_priority,labeler,notes
+T001,unauthorized_card_not_present,P2,fixture,
+T002,merchandise_not_received,P2,fixture,
+T003,duplicate_processing,P2,fixture,
+T004,cancelled_recurring,P2,fixture,
+T005,credit_not_processed,P2,fixture,
+T006,account_takeover,P1,fixture,
+T007,unauthorized_card_present,P2,fixture,
+T008,issuer_dispute_process_failure,P1,fixture,
+T009,other,P3,fixture,
+T010,not_as_described_or_defective,P2,fixture,
