@@ -4,6 +4,18 @@ Connect with **Get Data → Snowflake**, database `DISPUTE_TRIAGE`, schema `MART
 Import `V_CASES`, `V_CATEGORY_TRENDS`, `V_RECURRING_ISSUES`, `V_CASE_AGING`, `V_MODEL_QUALITY`.
 Use Import mode with a daily scheduled refresh (DirectQuery is fine at under 1M rows).
 
+## Theme
+Import `powerbi/theme.json` via **View → Themes → Browse for themes**. Use these semantic colours consistently on every page:
+
+| Meaning | Colour | Hex |
+|---|---|---|
+| P1 / fraud / SLA breach | red | `#C73E1D` |
+| P2 / pending review | amber | `#E2B13C` |
+| P3 / auto-triaged / passing DQ check | green | `#3B8B5A` |
+| Primary series / KPI callouts | navy | `#1F4E79` |
+
+Conditional formatting (e.g. `CASES_90D` on Recurring Issues, `AGE_DAYS` on Case Aging) uses the theme's `minimum → center → maximum` diverging scale (green → amber → red).
+
 ## Data model
 `V_CASES` is the fact table. Add a `DimDate` table marked as a date table, and relate `DimDate[Date]` 1:* to `V_CASES[DATE_RECEIVED]`.
 
@@ -30,3 +42,5 @@ Cases MoM %        = VAR cur = [Total Cases]
 5. **Model Quality**: a weekly line of `ROOT_CAUSE_AGREEMENT` by `PROMPT_VERSION`, and an override table where `MODEL_OVERRIDDEN = TRUE`.
 
 Slicers on every page: date range, company, state, priority, case status.
+
+6. **Data Health**: one card per check from `MART.V_DQ_LATEST` (green when `PASSED`, red otherwise), plus `V_LLM_USAGE` tokens/day and cache hit rate.

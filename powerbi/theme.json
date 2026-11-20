@@ -1,0 +1,33 @@
+{
+  "name": "Dispute Triage",
+  "dataColors": ["#1F4E79", "#2E86AB", "#F18F01", "#C73E1D", "#3B8B5A", "#6C5B7B", "#A0A4A8", "#E2B13C", "#5DA9E9", "#8C2F39", "#4A7C59", "#B07AA1"],
+  "foreground": "#1B1F24",
+  "foregroundNeutralSecondary": "#5A6270",
+  "background": "#FFFFFF",
+  "backgroundLight": "#F4F6F8",
+  "tableAccent": "#1F4E79",
+  "good": "#3B8B5A",
+  "neutral": "#E2B13C",
+  "bad": "#C73E1D",
+  "maximum": "#C73E1D",
+  "center": "#E2B13C",
+  "minimum": "#3B8B5A",
+  "textClasses": {
+    "title": { "fontFace": "Segoe UI Semibold", "fontSize": 14, "color": "#1B1F24" },
+    "header": { "fontFace": "Segoe UI Semibold", "fontSize": 12, "color": "#1B1F24" },
+    "label": { "fontFace": "Segoe UI", "fontSize": 10, "color": "#5A6270" },
+    "callout": { "fontFace": "Segoe UI Light", "fontSize": 28, "color": "#1F4E79" }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [{ "show": true, "color": { "solid": { "color": "#FFFFFF" } }, "transparency": 0 }],
+        "border": [{ "show": true, "color": { "solid": { "color": "#E1E5EA" } }, "radius": 6 }],
+        "title": [{ "show": true, "fontSize": 12 }]
+      }
+    },
+    "page": {
+      "*": { "background": [{ "color": { "solid": { "color": "#F4F6F8" } }, "transparency": 0 }] }
+    }
+  }
+}

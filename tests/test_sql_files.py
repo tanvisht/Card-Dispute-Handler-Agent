@@ -25,3 +25,10 @@ def test_stream_task_and_dq_view_defined():
     for obj in ("STREAM RAW_COMPLAINTS_STREAM", "TASK TASK_DAILY_DQ", "PROCEDURE SP_RUN_DQ_CHECKS",
                 "VIEW MART.V_DQ_LATEST"):
         assert obj in text
+
+
+def test_powerbi_theme_is_valid_json_with_semantic_colours():
+    import json
+    theme = json.loads((SQL.parents[1] / "powerbi" / "theme.json").read_text())
+    assert theme["bad"] == "#C73E1D" and theme["good"] == "#3B8B5A"
+    assert len(theme["dataColors"]) >= 8
