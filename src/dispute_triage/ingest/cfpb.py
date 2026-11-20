@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import csv
 import logging
+import time
 from collections.abc import Iterable, Iterator
 from datetime import date
 from pathlib import Path
@@ -62,6 +63,30 @@ def record_to_complaint(src: dict) -> Complaint | None:
     )
 
 
+RETRY_STATUS = {429, 500, 502, 503, 504}
+
+
+def _get_with_retry(client: httpx.Client, url: str, params, max_attempts: int = 5,
+                    base_delay: float = 1.0, sleep=time.sleep) -> httpx.Response:
+    """GET with exponential backoff on 429/5xx and transport errors; honours Retry-After."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = client.get(url, params=params)
+        except httpx.TransportError:
+            if attempt == max_attempts:
+                raise
+            sleep(base_delay * 2 ** (attempt - 1))
+            continue
+        if resp.status_code not in RETRY_STATUS or attempt == max_attempts:
+            resp.raise_for_status()
+            return resp
+        retry_after = resp.headers.get("Retry-After")
+        delay = float(retry_after) if retry_after and retry_after.isdigit() else base_delay * 2 ** (attempt - 1)
+        log.warning("CFPB API %s, retry %d/%d in %.1fs", resp.status_code, attempt, max_attempts, delay)
+        sleep(delay)
+    raise RuntimeError("unreachable")
+
+
 def fetch_from_api(
     limit: int = 5000,
     date_min: str = "2023-01-01",
@@ -70,6 +95,7 @@ def fetch_from_api(
     issues: list[str] | None = None,
     page_size: int = 500,
     client: httpx.Client | None = None,
+    sleep=time.sleep,
 ) -> Iterator[Complaint]:
     """Page through the CFPB search API and yield complaints that have narratives."""
     own = client is None
@@ -87,17 +113,19 @@ def fetch_from_api(
     params += [("issue", i) for i in (issues or DEFAULT_ISSUES)]
 
     yielded, frm = 0, 0
+    seen: set[str] = set()  # pages can overlap when new complaints arrive mid-crawl
     try:
         while yielded < limit:
-            resp = client.get(CFPB_API, params=params + [("size", str(page_size)), ("frm", str(frm))])
-            resp.raise_for_status()
+            resp = _get_with_retry(client, CFPB_API, params + [("size", str(page_size)), ("frm", str(frm))],
+                                   sleep=sleep)
             payload = resp.json()
             hits = payload["hits"]["hits"] if isinstance(payload, dict) else payload
             if not hits:
                 break
             for h in hits:
                 c = record_to_complaint(h.get("_source", h))
-                if c:
+                if c and c.complaint_id not in seen:
+                    seen.add(c.complaint_id)
                     yield c
                     yielded += 1
                     if yielded >= limit:
