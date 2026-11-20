@@ -47,3 +47,20 @@ def test_llm_classifier_uses_forced_tool_call(settings, complaints):
     assert out.root_cause == RootCause.DUPLICATE_PROCESSING and not out.needs_human_review
     assert captured["tool_choice"] == {"type": "tool", "name": "record_triage"}
     assert captured["temperature"] == 0
+
+
+def test_prompt_v2_includes_few_shot_examples_and_is_sent(settings, complaints):
+    from dispute_triage.classify.prompts import PROMPT_VERSION, SYSTEM_PROMPT
+    assert PROMPT_VERSION == "v2" == settings.triage_prompt_version
+    assert SYSTEM_PROMPT.count("-> root_cause=") == 4
+    captured = {}
+
+    class FakeMessages:
+        def create(self, **kw):
+            captured.update(kw)
+            return SimpleNamespace(content=[SimpleNamespace(type="tool_use", input={
+                "root_cause": "other", "priority": "P3", "confidence": 0.9, "rationale": "", "evidence_quote": ""})])
+
+    LLMClassifier(settings, client=SimpleNamespace(messages=FakeMessages())).classify(complaints[0])
+    sent = captured["system"][0]
+    assert "WORKED EXAMPLES" in sent["text"] and sent["cache_control"] == {"type": "ephemeral"}

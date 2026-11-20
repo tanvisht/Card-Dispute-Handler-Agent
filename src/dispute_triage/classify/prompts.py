@@ -1,7 +1,7 @@
 """Versioned prompt + tool schema for the LLM classifier."""
 from ..taxonomy import ROOT_CAUSE_DESCRIPTIONS, Priority, RootCause
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 
 _taxonomy = "\n".join(f"- {rc.value}: {desc}" for rc, desc in ROOT_CAUSE_DESCRIPTIONS.items())
 
@@ -31,7 +31,27 @@ CONFIDENCE: 0.0-1.0, your probability that root_cause is correct. Use < 0.7 when
 narrative is ambiguous or fits two causes.
 
 evidence_quote MUST be copied verbatim from the narrative (<= 30 words).
-Always respond by calling the record_triage tool."""
+Always respond by calling the record_triage tool.
+
+WORKED EXAMPLES (illustrative, written for this prompt - not real complaints):
+
+1. "I returned the jacket in store and got a receipt for a refund. Two months later the credit never
+   showed up and the bank closed my dispute saying I authorized the purchase."
+   -> root_cause=credit_not_processed, priority=P2, confidence=0.85
+   (the bank's handling is secondary; the underlying transaction is a missing refund)
+
+2. "My elderly mother's card was used for $2,800 of gift cards online. She still has the card.
+   The bank says she must have shared her PIN."
+   -> root_cause=unauthorized_card_not_present, priority=P1, confidence=0.9
+   (card still in hand + online use; elderly consumer and >= $1,000 make it P1)
+
+3. "Someone added themselves as an authorized user on my account and requested a replacement card
+   to a new address."
+   -> root_cause=account_takeover, priority=P1, confidence=0.92
+
+4. "The streaming service charged me for a year after I cancelled online. I have the confirmation."
+   -> root_cause=cancelled_recurring, priority=P2, confidence=0.93
+   (not credit_not_processed: no refund was promised, the merchant kept billing)"""
 
 TRIAGE_TOOL = {
     "name": "record_triage",

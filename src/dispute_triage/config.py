@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     triage_model: str = "claude-sonnet-5-5"
     triage_classifier: Literal["llm", "rules"] = "llm"
     triage_confidence_threshold: float = 0.75
-    triage_prompt_version: str = "v1"
+    triage_prompt_version: str = "v2"
     triage_max_narrative_chars: int = 6000
 
     triage_storage: Literal["sqlite", "snowflake"] = "sqlite"
