@@ -5,6 +5,7 @@ import re
 
 from ..models import Complaint
 from ..taxonomy import Priority, RootCause
+from ..textutils import max_amount
 from .base import Classifier, RawLabel
 
 # Ordered: first strong match wins ties.
@@ -31,7 +32,8 @@ PATTERNS: list[tuple[RootCause, list[str]]] = [
 PROCESS_FAILURE = [r"provisional credit", r"(denied|closed) (my|the) (dispute|claim)", r"never investigat",
                    r"no response", r"reversed the credit", r"60 days", r"regulation (z|e)", r"fair credit billing"]
 P1_SIGNALS = [r"elderly", r"\bdisab", r"\bveteran", r"collections?", r"credit (report|score)",
-              r"lawyer|attorney|lawsuit", r"identity theft", r"\$\s?[1-9]\d{0,2},\d{3}", r"still happening|ongoing"]
+              r"lawyer|attorney|lawsuit", r"identity theft", r"still happening|ongoing"]
+P1_AMOUNT = 1000.0
 
 
 def _hits(text: str, patterns: list[str]) -> int:
@@ -56,7 +58,7 @@ class RulesClassifier(Classifier):
             runner_up = sorted(scores.values())[-2]
             conf = 0.55 + 0.1 * min(best_score - runner_up, 3)
 
-        p1 = _hits(text, P1_SIGNALS)
+        p1 = _hits(text, P1_SIGNALS) + (max_amount(text) >= P1_AMOUNT)
         priority = Priority.P1 if p1 >= 1 else (Priority.P3 if root == RootCause.OTHER else Priority.P2)
         return RawLabel(root_cause=root.value, priority=priority.value, confidence=conf,
                         rationale=f"keyword scores={ {k.value: v for k, v in scores.items() if v} } process={process}",
