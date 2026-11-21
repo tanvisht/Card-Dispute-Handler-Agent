@@ -5,6 +5,11 @@
 `Python` · `FastAPI` · `Snowflake` · `SQL` · `Claude API` · `Power BI`
 
 [![CI](https://github.com/tanvisht/Card-Dispute-Handler-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/tanvisht/Card-Dispute-Handler-Agent/actions)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Prompt](https://img.shields.io/badge/prompt-v2-purple)
+
+See [CHANGELOG.md](CHANGELOG.md) for release notes and [CONTRIBUTING.md](CONTRIBUTING.md) for the dev workflow.
 
 ---
 
@@ -277,7 +282,15 @@ flowchart LR
 ```
 * **Acceptance criteria**: [`docs/ACCEPTANCE_CRITERIA.md`](docs/ACCEPTANCE_CRITERIA.md). Gates are root-cause accuracy ≥ 85%, fraud recall ≥ 95%, P1 recall ≥ 90%, auto-triaged accuracy ≥ 92%, and review rate ≤ 35%.
 * **UAT scripts**: [`docs/uat/UAT_TEST_SCRIPTS.md`](docs/uat/UAT_TEST_SCRIPTS.md) has 11 scenarios mapped to the criteria.
-* **Automated tests**: `pytest` covers ingest paging (mocked HTTP), the guardrails, the LLM call contract (mocked client), the evaluation math, and the full API flow including idempotency and analyst override.
+* **Automated tests**: 59 `pytest` cases, run in CI on Python 3.11 and 3.12. They cover:
+  * ingest paging, retry, and dedupe (mocked HTTP)
+  * the guardrails and the money-amount parser
+  * the LLM call contract and token capture (mocked client)
+  * the evaluation math (accuracy, kappa, ECE)
+  * taxonomy, reason-code, and SQL vocabulary sync
+  * the full API flow: idempotency, analyst override, auth, and CSV export
+* **Inter-annotator agreement**: `triage agreement` reports Cohen's kappa so model accuracy can be read against human agreement.
+* **Calibration**: the eval report includes reliability bins and ECE to check that the 0.75 review threshold is meaningful.
 * **Headline result**: on the 300-case gold set, the Claude classifier reached **~88% root-cause accuracy**. Reproduce it with `make evaluate`, which writes `reports/eval.md`.
 
 The metric that matters most is **accuracy on auto-triaged cases**. Overall accuracy shows how good the model is. Auto-triaged accuracy shows whether it is *safe to let through without review*, which is the point of the review flag.
